@@ -20,7 +20,7 @@ function Backdrop({ mood }: { mood: MoodKey }) {
   const uniforms = useMemo(() => ({ uTime: { value: 0 }, uColor: { value: new THREE.Color(MOODS[mood].color) }, uTurb: { value: 0.3 } }), []);
   useFrame((s, d) => {
     if (!mat.current) return;
-    const u = mat.current.uniforms;
+    const u = mat.current.uniforms as { uTime: { value: number }; uColor: { value: THREE.Color }; uTurb: { value: number } };
     u.uTime.value = s.clock.elapsedTime;
     target.set(MOODS[mood].color);
     (u.uColor.value as THREE.Color).lerp(target, 1 - Math.exp(-3 * d));
@@ -56,7 +56,7 @@ function Particles({ mood }: { mood: MoodKey }) {
   const N = 90;
   const ref = useRef<THREE.Points>(null);
   const mat = useRef<THREE.PointsMaterial>(null);
-  const seeds = useMemo(() => Array.from({ length: N }, () => [Math.random() * Math.PI * 2, 0.8 + Math.random() * 1.6, Math.random() * 3, Math.random()]), []);
+  const seeds = useMemo(() => Array.from({ length: N }, (): [number, number, number, number] => [Math.random() * Math.PI * 2, 0.8 + Math.random() * 1.6, Math.random() * 3, Math.random()]), []);
   const pos = useMemo(() => new Float32Array(N * 3), []);
   const c = useMemo(() => new THREE.Color(), []);
   useFrame((s, d) => {
@@ -69,7 +69,7 @@ function Particles({ mood }: { mood: MoodKey }) {
       else { const rr = r * (0.7 + 0.5 * Math.abs(Math.sin(t * 6 + k * 9))); x = Math.cos(a + t * 2.5) * rr; z = Math.sin(a + t * 2.5) * rr; y = 0.4 + y0 * 0.6 + (Math.random() - 0.5) * 0.08; }
       pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = z;
     });
-    if (ref.current) ref.current.geometry.attributes.position.needsUpdate = true;
+    if (ref.current) ref.current.geometry.getAttribute("position").needsUpdate = true;
     if (mat.current) { c.set(MOODS[mood].color); mat.current.color.lerp(c, 1 - Math.exp(-4 * d)); mat.current.size = mood === "happy" ? 0.09 : mood === "alert" ? 0.06 : 0.05; }
   });
   return (
