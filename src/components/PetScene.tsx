@@ -89,8 +89,13 @@ function Pet({ species, mood }: { species: Species; mood: MoodKey }) {
   const eyes = useRef<THREE.Group>(null);
   const cur = useRef({ ...P.neutral });
   const isCat = species === "cat";
-  const fur = isCat ? "#d98a4a" : "#c99a63";
-  const furLight = isCat ? "#f3d9b8" : "#f4e6cf";
+  const isBird = species === "bird";
+  const isRabbit = species === "rabbit";
+  const isGuineaPig = species === "guinea-pig";
+  const isHorse = species === "horse";
+  const isHamster = species === "hamster";
+  const fur = isBird ? "#43b8a5" : isRabbit ? "#eee4d6" : isGuineaPig ? "#9a705b" : isHorse ? "#79533d" : isHamster ? "#d99a4b" : isCat ? "#d98a4a" : "#c99a63";
+  const furLight = isBird ? "#f2c66d" : isRabbit || isGuineaPig ? "#f5eee5" : isHorse ? "#3d2923" : isHamster ? "#f2d4a7" : isCat ? "#f3d9b8" : "#f4e6cf";
 
   useFrame((s, dRaw) => {
     const d = Math.min(dRaw, 0.05), t = s.clock.elapsedTime, c = cur.current, p = P[mood];
@@ -115,43 +120,49 @@ function Pet({ species, mood }: { species: Species; mood: MoodKey }) {
 
   const m = (col: string, r = 0.75) => <meshStandardMaterial color={col} roughness={r} />;
   const leg = (x: number, z: number) => (
-    <mesh position={[x, 0.3, z]} castShadow><capsuleGeometry args={[0.11, 0.4, 6, 12]} />{m(fur)}</mesh>
+    <mesh position={[x, isHorse ? 0.43 : isBird ? 0.22 : 0.3, z]} castShadow><capsuleGeometry args={[isHorse ? 0.075 : isBird ? 0.045 : 0.11, isHorse ? 0.72 : isBird ? 0.22 : 0.4, 6, 12]} />{m(fur)}</mesh>
   );
 
   return (
     <group ref={root}>
       <group position={[0, 0.05, 0]}>
-        <mesh position={[0, 0.78, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-          <capsuleGeometry args={[0.36, isCat ? 0.7 : 0.8, 8, 20]} />{m(fur)}
+        <mesh position={[0, isHorse ? 1.05 : isBird ? 0.7 : 0.78, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          {isRabbit || isGuineaPig || isHamster || isBird ? <sphereGeometry args={[isBird ? 0.38 : isHamster ? 0.39 : 0.43, 24, 20]} /> : <capsuleGeometry args={[isHorse ? 0.38 : 0.36, isCat ? 0.7 : isHorse ? 1.05 : 0.8, 8, 20]} />}{m(fur)}
         </mesh>
-        <mesh position={[0.05, 0.7, 0.18]} scale={[1.2, 0.8, 0.6]}><sphereGeometry args={[0.3, 20, 20]} />{m(furLight)}</mesh>
+        {!isBird && <mesh position={[0.05, isHorse ? 0.92 : 0.7, 0.18]} scale={[1.2, 0.8, 0.6]}><sphereGeometry args={[0.3, 20, 20]} />{m(furLight)}</mesh>}
+        {isBird && [-1, 1].map((side) => <mesh key={side} position={[-0.05, 0.72, side * 0.31]} rotation={[side * -0.2, 0, side * 0.15]} scale={[0.22, 0.29, 0.11]} castShadow><sphereGeometry args={[1, 16, 12]} />{m("#258b81")}</mesh>)}
+        {isHorse && <mesh position={[0.48, 1.25, 0]} rotation={[0, 0, -0.35]} castShadow><capsuleGeometry args={[0.22, 0.72, 8, 14]} />{m(fur)}</mesh>}
         {leg(0.45, 0.18)}{leg(0.45, -0.18)}{leg(-0.45, 0.18)}{leg(-0.45, -0.18)}
         {/* tail */}
-        <group ref={tail} position={[-0.8, 0.9, 0]}>
-          <mesh position={[-0.25, 0.25, 0]} rotation={[0, 0, isCat ? 0.5 : 0.8]} castShadow>
-            <capsuleGeometry args={[isCat ? 0.06 : 0.08, isCat ? 0.7 : 0.45, 6, 10]} />{m(fur)}
+        <group ref={tail} position={[-(isHorse ? 0.9 : 0.8), isHorse ? 1.15 : 0.9, 0]}>
+          <mesh position={[-0.25, isHorse ? -0.35 : 0.25, 0]} rotation={[0, 0, isCat ? 0.5 : 0.8]} castShadow>
+            <capsuleGeometry args={[isHorse ? 0.1 : isBird ? 0.04 : isCat ? 0.06 : 0.08, isCat ? 0.7 : isHorse ? 0.55 : isBird ? 0.22 : 0.45, 6, 10]} />{m(fur)}
           </mesh>
         </group>
         {/* head */}
-        <group ref={head} position={[0.85, 1.15, 0]}>
+        <group ref={head} position={[isHorse ? 0.82 : isBird ? 0.4 : isRabbit ? 0.68 : 0.85, isHorse ? 1.63 : isBird ? 0.98 : isHamster || isGuineaPig ? 1.02 : 1.15, 0]}>
           <mesh castShadow scale={isCat ? [1, 0.92, 1.05] : [1.05, 1, 1]}><sphereGeometry args={[0.38, 28, 28]} />{m(fur)}</mesh>
-          <mesh position={[0.3, -0.1, 0]} scale={isCat ? [0.6, 0.5, 0.7] : [1, 0.7, 0.75]}><sphereGeometry args={[0.2, 20, 20]} />{m(furLight)}</mesh>
-          <mesh position={[isCat ? 0.42 : 0.5, -0.02, 0]}><sphereGeometry args={[isCat ? 0.04 : 0.065, 12, 12]} />{m("#2a1d1a", 0.3)}</mesh>
+          {!isBird && <mesh position={[isCat ? 0.3 : 0.34, -0.1, 0]} scale={isCat ? [0.6, 0.5, 0.7] : [1, 0.7, 0.75]}><sphereGeometry args={[0.2, 20, 20]} />{m(furLight)}</mesh>}
+          {isBird ? <mesh position={[0.36, -0.1, 0]} rotation={[0, 0, -Math.PI / 2]}><coneGeometry args={[0.12, 0.28, 5]} />{m("#e89a3a", 0.4)}</mesh> : <mesh position={[isCat ? 0.42 : 0.5, -0.02, 0]}><sphereGeometry args={[isCat ? 0.04 : 0.065, 12, 12]} />{m(isHorse ? "#201816" : "#2a1d1a", 0.3)}</mesh>}
           <group ref={eyes}>
             {[0.15, -0.15].map((z) => (
               <mesh key={z} position={[0.3, 0.1, z]}><sphereGeometry args={[0.06, 14, 14]} /><meshStandardMaterial color="#111" roughness={0.1} /></mesh>
             ))}
           </group>
-          {[1, -1].map((side) => (
+          {!isBird && [1, -1].map((side) => (
             <group key={side} ref={side === 1 ? earL : earR} position={[0, 0.28, 0.2 * side]}>
-              {isCat ? (
+              {isRabbit ? (
+                <mesh position={[-0.02, 0.27, 0]} rotation={[side * 0.12, 0, side * -0.12]} castShadow><capsuleGeometry args={[0.075, 0.48, 6, 10]} />{m(fur)}</mesh>
+              ) : isCat ? (
                 <mesh position={[0, 0.14, 0]} rotation={[side * 0.2, 0, 0]} castShadow><coneGeometry args={[0.13, 0.3, 4]} />{m(fur)}</mesh>
+              ) : isHorse ? (
+                <mesh position={[0.02, 0.13, 0]} rotation={[side * 0.2, 0, -side * 0.1]} castShadow><coneGeometry args={[0.08, 0.24, 5]} />{m(fur)}</mesh>
               ) : (
                 <mesh position={[0, 0.02, 0.08 * side]} rotation={[side * 0.9, 0, 0]} scale={[0.6, 1, 0.25]} castShadow><sphereGeometry args={[0.2, 14, 14]} />{m("#8a6038")}</mesh>
               )}
             </group>
           ))}
-          {isCat && [1, -1].map((s) => (
+          {(isCat || isRabbit || isGuineaPig || isHamster) && [1, -1].map((s) => (
             <mesh key={s} position={[0.42, -0.08, 0.1 * s]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.004, 0.004, 0.4]} />{m("#f5f5f5")}</mesh>
           ))}
         </group>
