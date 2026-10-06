@@ -1,7 +1,9 @@
 const ACCOUNTS_KEY = "animal-controller.demo.accounts.v1";
 const SESSION_KEY = "animal-controller.demo.session.v1";
 
-type DemoAccount = { email: string; salt: string; passwordHash: string };
+export type DemoRole = "tutor" | "veterinarian";
+export type DemoUser = { email: string; role: DemoRole; councilNumber: string };
+type DemoAccount = { email: string; salt: string; passwordHash: string; role?: DemoRole; councilNumber?: string };
 
 function createSalt(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -17,7 +19,11 @@ function readAccounts(): DemoAccount[] {
         typeof item === "object" && item !== null &&
         typeof item.email === "string" && typeof item.salt === "string" &&
         typeof item.passwordHash === "string",
-    );
+    ).map((account) => ({
+      ...account,
+      role: account.role === "veterinarian" ? "veterinarian" : "tutor",
+      councilNumber: typeof account.councilNumber === "string" ? account.councilNumber : "",
+    }));
   } catch {
     return [];
   }
@@ -60,10 +66,11 @@ async function matchesPassword(password: string, account: DemoAccount): Promise<
   return hashPassword(password, account.salt).then((hash) => hash === account.passwordHash);
 }
 
-export function getDemoSession(): string | null {
+export function getDemoSession(): DemoUser | null {
   try {
     const email = localStorage.getItem(SESSION_KEY);
-    return email && readAccounts().some((account) => account.email === email) ? email : null;
+    const account = email ? readAccounts().find((item) => item.email === email) : undefined;
+    return account ? { email: account.email, role: account.role ?? "tutor", councilNumber: account.councilNumber ?? "" } : null;
   } catch {
     return null;
   }
@@ -73,7 +80,8 @@ export async function authenticateDemo(
   mode: "login" | "register",
   rawEmail: string,
   password: string,
-): Promise<{ email?: string; error?: string }> {
+  details: { role: DemoRole; councilNumber: string } = { role: "tutor", councilNumber: "" },
+): Promise<(DemoUser & { error?: never }) | { error: string }> {
   const email = rawEmail.trim().toLocaleLowerCase("en-US");
   if (!email || !password) return { error: "Informe o e-mail e a senha." };
   try {
@@ -81,8 +89,9 @@ export async function authenticateDemo(
     const existing = accounts.find((account) => account.email === email);
     if (mode === "register") {
       if (existing) return { error: "Este e-mail já tem uma conta neste navegador. Entre com sua senha." };
+      if (details.role === "veterinarian" && !details.councilNumber.trim()) return { error: "Informe o número do CRMV para criar uma conta veterinária." };
       const salt = createSalt();
-      accounts.push({ email, salt, passwordHash: await hashPassword(password, salt) });
+      accounts.push({ email, salt, passwordHash: await hashPassword(password, salt), role: details.role, councilNumber: details.role === "veterinarian" ? details.councilNumber.trim() : "" });
       localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
     } else {
       if (!existing || !(await matchesPassword(password, existing))) {
@@ -90,7 +99,7 @@ export async function authenticateDemo(
       }
     }
     localStorage.setItem(SESSION_KEY, email);
-    return { email };
+    return { email, role: existing?.role ?? (mode === "register" ? details.role : "tutor"), councilNumber: existing?.councilNumber ?? (mode === "register" && details.role === "veterinarian" ? details.councilNumber.trim() : "") };
   } catch {
     return { error: "Não foi possível salvar o acesso neste navegador. Verifique as configurações de armazenamento e tente novamente." };
   }
@@ -108,6 +117,22 @@ export async function resetDemoPassword(rawEmail: string, password: string): Pro
     return {};
   } catch {
     return { error: "Não foi possível atualizar a senha neste navegador. Tente novamente." };
+  }
+}
+
+export async function deleteDemoAccount(rawEmail: string, password: string): Promise<{ error?: string }> {
+  const email = rawEmail.trim().toLocaleLowerCase("en-US");
+  try {
+    const accounts = readAccounts();
+    const account = accounts.find((item) => item.email === email);
+    if (!account || !(await matchesPassword(password, account))) {
+      return { error: "E-mail ou senha incorretos. A conta não foi removida." };
+    }
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts.filter((item) => item.email !== email)));
+    if (localStorage.getItem(SESSION_KEY) === email) localStorage.removeItem(SESSION_KEY);
+    return {};
+  } catch {
+    return { error: "Não foi possível remover a conta deste navegador. Tente novamente." };
   }
 }
 
