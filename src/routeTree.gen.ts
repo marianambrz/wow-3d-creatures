@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AdocaoIndexRouteImport } from './routes/adocao/index'
+import { Route as AdocaoPetIdRouteImport } from './routes/adocao/$petId'
+import { Route as ApiAnimalAssistantRouteImport } from './routes/api/animal-assistant'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiProfileRouteImport } from './routes/api/profile'
+import { Route as PetsIndexRouteImport } from './routes/pets/index'
+import { Route as PetsPetIdRouteImport } from './routes/pets/$petId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdocaoIndexRoute = AdocaoIndexRouteImport.update({
+  id: '/adocao/',
+  path: '/adocao/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdocaoPetIdRoute = AdocaoPetIdRouteImport.update({
+  id: '/adocao/$petId',
+  path: '/adocao/$petId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnimalAssistantRoute = ApiAnimalAssistantRouteImport.update({
+  id: '/api/animal-assistant',
+  path: '/api/animal-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiProfileRoute = ApiProfileRouteImport.update({
+  id: '/api/profile',
+  path: '/api/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PetsIndexRoute = PetsIndexRouteImport.update({
+  id: '/pets/',
+  path: '/pets/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PetsPetIdRoute = PetsPetIdRouteImport.update({
+  id: '/pets/$petId',
+  path: '/pets/$petId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/adocao/$petId': typeof AdocaoPetIdRoute
+  '/api/animal-assistant': typeof ApiAnimalAssistantRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/profile': typeof ApiProfileRoute
+  '/pets/$petId': typeof PetsPetIdRoute
+  '/adocao/': typeof AdocaoIndexRoute
+  '/pets/': typeof PetsIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/adocao/$petId': typeof AdocaoPetIdRoute
+  '/api/animal-assistant': typeof ApiAnimalAssistantRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/profile': typeof ApiProfileRoute
+  '/pets/$petId': typeof PetsPetIdRoute
+  '/adocao': typeof AdocaoIndexRoute
+  '/pets': typeof PetsIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/adocao/$petId': typeof AdocaoPetIdRoute
+  '/api/animal-assistant': typeof ApiAnimalAssistantRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/profile': typeof ApiProfileRoute
+  '/pets/$petId': typeof PetsPetIdRoute
+  '/adocao/': typeof AdocaoIndexRoute
+  '/pets/': typeof PetsIndexRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/reset-password'
+    | '/adocao/$petId'
+    | '/api/animal-assistant'
+    | '/api/health'
+    | '/api/profile'
+    | '/pets/$petId'
+    | '/adocao/'
+    | '/pets/'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/reset-password'
+    | '/adocao/$petId'
+    | '/api/animal-assistant'
+    | '/api/health'
+    | '/api/profile'
+    | '/pets/$petId'
+    | '/adocao'
+    | '/pets'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/reset-password'
+    | '/adocao/$petId'
+    | '/api/animal-assistant'
+    | '/api/health'
+    | '/api/profile'
+    | '/pets/$petId'
+    | '/adocao/'
+    | '/pets/'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  AdocaoPetIdRoute: typeof AdocaoPetIdRoute
+  ApiAnimalAssistantRoute: typeof ApiAnimalAssistantRoute
+  ApiHealthRoute: typeof ApiHealthRoute
+  ApiProfileRoute: typeof ApiProfileRoute
+  PetsPetIdRoute: typeof PetsPetIdRoute
+  AdocaoIndexRoute: typeof AdocaoIndexRoute
+  PetsIndexRoute: typeof PetsIndexRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +169,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/adocao/': {
+      id: '/adocao/'
+      path: '/adocao'
+      fullPath: '/adocao/'
+      preLoaderRoute: typeof AdocaoIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/adocao/$petId': {
+      id: '/adocao/$petId'
+      path: '/adocao/$petId'
+      fullPath: '/adocao/$petId'
+      preLoaderRoute: typeof AdocaoPetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/animal-assistant': {
+      id: '/api/animal-assistant'
+      path: '/api/animal-assistant'
+      fullPath: '/api/animal-assistant'
+      preLoaderRoute: typeof ApiAnimalAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/profile': {
+      id: '/api/profile'
+      path: '/api/profile'
+      fullPath: '/api/profile'
+      preLoaderRoute: typeof ApiProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pets/': {
+      id: '/pets/'
+      path: '/pets'
+      fullPath: '/pets/'
+      preLoaderRoute: typeof PetsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pets/$petId': {
+      id: '/pets/$petId'
+      path: '/pets/$petId'
+      fullPath: '/pets/$petId'
+      preLoaderRoute: typeof PetsPetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  AdocaoPetIdRoute: AdocaoPetIdRoute,
+  ApiAnimalAssistantRoute: ApiAnimalAssistantRoute,
+  ApiHealthRoute: ApiHealthRoute,
+  ApiProfileRoute: ApiProfileRoute,
+  PetsPetIdRoute: PetsPetIdRoute,
+  AdocaoIndexRoute: AdocaoIndexRoute,
+  PetsIndexRoute: PetsIndexRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -6,7 +6,14 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+const vercelNitro = {
+  preset: "vercel",
+  // Root server.js is a legacy SQLite API; TanStack Start serves the app routes.
+  serverEntry: false,
+};
+
 export default defineConfig({
+  nitro: vercelNitro,
   vite: {
     // TanStack Store imports this CommonJS shim by its ESM named export.
     // Pre-bundling it lets Vite expose the named export to the browser.

@@ -1,41 +1,35 @@
-# Expressive 3D Interface
+# Animal Controller API
 
-Seguinte, preciso da sua ajuda para montar todo o front end desse projeto.
+Back end sem dependências (Node >= 22.13: `http` + `node:sqlite` + `node:crypto`).
 
-Repare que hoje é principalmente html, tudo em uma página, está um pouco minimalista...
-O que eu quero, é algo com cara de sistema de verdade.
-
-Vamos focar APENAS no front por enquanto, então não se preocupe com o back, apenas garanta que tenha algo na minha tela para eu apresentar quando você acabar.
-
-Quero que use bastante 3d e tecnologias do tipo, para deixar tudo com um efeito "UAU"
-
-A parte onde mostraria o comportamento e o humor, eu quero 3d também, tipo, tem que transparecer o humor do animal de forma visual sem que eu tenha que ler nada na tela.
-
-Use algumas tecnologias como:
-- HTML, CSS, JavaScript
-- Three.js r160 (build UMD)
-- WebGL
-- GLSL
-- Canvas 2D
-- SVG
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/65695db8-2281-4da9-a6a9-622e07af7dd6).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+```bash
+node server.js     # http://localhost:3000
 ```
+Variáveis: `PORT` (3000) · `DB_FILE` (animal.db) · `JWT_SECRET` (se vazio, gera `.secret` local) · `CORS_ORIGIN` (`*`; em produção use o domínio do front).
+
+Rotas autenticadas usam `Authorization: Bearer <token>` (token vem de register/login, vale 7 dias).
+
+| Área | Rota |
+|---|---|
+| Auth | `POST /api/auth/register` · `POST /api/auth/login` `{email,password}` · `GET /api/me` |
+| Catálogo | `GET /api/species` · `GET /api/catalog?species=gato` (grupos, comportamentos, níveis/cores) |
+| Medidor ao vivo | `POST /api/score` `{species, behaviors:[...]}` → pontuação, nível, cor, `gauge` 0–100 (não salva) |
+| Animais | `GET/POST /api/animals` · `GET/PATCH/DELETE /api/animals/:id` (`species,name,tutorName,breed,birthDate,notes`) |
+| Observações | `POST /api/animals/:id/observations` `{behaviors,note?}` · `GET .../status` · `GET .../history?days=30` |
+| Vacinas | `GET/POST /api/animals/:id/vaccines` `{name,appliedOn,nextDose?}` (AAAA-MM-DD) · `DELETE /api/vaccines/:id` |
+| Diário | `GET/POST /api/animals/:id/diary` `{text}` · `DELETE /api/diary/:id` |
+| Assistente | `POST /api/animals/:id/assistant` → resposta por regras sobre a última observação |
+
+Espécies: `cao, gato, ave, coelho, porquinho_da_india, cavalo, hamster`.
+
+## Pontuação
+Cada comportamento tem um peso (em `catalog.js`). A soma vira o nível:
+`>= +3` Bem disposto · `0 a +2` Tranquilo · `-1 a -4` Atenção · `<= -5` Alerta.
+Alguns sinais (respiração difícil; vômito, diarreia, tremores, dificuldade de movimento) forçam um nível mínimo
+independentemente da soma. Toda resposta inclui o aviso de que não substitui avaliação veterinária.
+
+## Pontos para revisar (eu não vi o código original)
+- Pesos, faixas dos níveis e comportamentos por espécie são suposições minhas, ajustadas para bater com os prints (`+5` = "Bem disposto").
+- Os campos de "Tutor e animal" abaixo do nome do animal não apareciam nos prints; adicionei raça, nascimento e observações.
+- O assistente é um stub por regras: é o ponto para plugar um modelo de linguagem.
+- Senhas com scrypt, tokens HS256 e limite de tentativas de login em memória. Em produção, defina `JWT_SECRET` e `CORS_ORIGIN`.
