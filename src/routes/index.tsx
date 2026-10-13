@@ -8,6 +8,16 @@ type DemoRole = "tutor" | "veterinarian";
 
 const PetScene = lazy(() => import("@/components/PetScene"));
 
+function withTimeout<T>(operation: Promise<T>, message: string, timeoutMs = 12000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    operation.then(
+      (value) => { window.clearTimeout(timeout); resolve(value); },
+      (error: unknown) => { window.clearTimeout(timeout); reject(error); },
+    );
+  });
+}
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -51,7 +61,7 @@ function Gauge({ score, mood }: { score: number; mood: MoodKey }) {
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: (mode: "login" | "register", email: string, password: string, details: { role: DemoRole; councilNumber: string }) => Promise<string | null> }) {
+function LoginScreen({ onLogin, onContinueAsGuest, initialNotice }: { onLogin: (mode: "login" | "register", email: string, password: string, details: { role: DemoRole; councilNumber: string }) => Promise<string | null>; onContinueAsGuest: () => void; initialNotice?: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<DemoRole>("tutor");
@@ -61,26 +71,27 @@ function LoginScreen({ onLogin }: { onLogin: (mode: "login" | "register", email:
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => { if (initialNotice) setNotice(initialNotice); }, [initialNotice]);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     if (mode === "recovery") {
       setBusy(true);
       try {
-        const result = await authClient.requestPasswordReset({ email, redirectTo: `${window.location.origin}/reset-password` });
+        const result = await withTimeout(authClient.requestPasswordReset({ email, redirectTo: `${window.location.origin}/reset-password` }), "O serviço de autenticação demorou para responder. Verifique a conexão e tente novamente.");
         if (result.error) setError(result.error.message ?? "Não foi possível solicitar a redefinição.");
         else setNotice("Se o e-mail estiver cadastrado, enviaremos um link para redefinir sua senha.");
-      } catch {
-        setError("Falha ao conectar ao servico de acesso. Confira a conexao e tente novamente.");
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Falha ao conectar ao serviço de acesso. Confira a conexão e tente novamente.");
       } finally { setBusy(false); }
       return;
     }
     setBusy(true);
     try {
-      const message = await onLogin(mode, email, password, { role, councilNumber });
+      const message = await withTimeout(onLogin(mode, email, password, { role, councilNumber }), "O serviço de autenticação demorou para responder. Verifique a conexão e tente novamente.");
       if (message) setError(message);
-    } catch {
-      setError("Falha ao conectar ao servico de acesso. Confira a conexao e tente novamente.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Falha ao conectar ao serviço de acesso. Confira a conexão e tente novamente.");
     } finally {
       setBusy(false);
     }
@@ -113,6 +124,7 @@ function LoginScreen({ onLogin }: { onLogin: (mode: "login" | "register", email:
             {mode === "login" && <button type="button" onClick={() => { setMode("recovery"); setNotice(""); setError(""); }} className="block text-sm text-primary hover:underline">Esqueci minha senha</button>}
             <button type="submit" disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-60">{busy ? "Aguarde…" : mode === "register" ? "Criar conta" : mode === "recovery" ? "Enviar link de redefinição" : "Entrar"}</button>
           </form>
+          <button type="button" onClick={onContinueAsGuest} className="mt-4 w-full rounded-xl border border-border px-4 py-3 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-foreground">Continuar sem entrar</button>
           {notice && <p role="status" className="mt-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm text-primary">{notice}</p>}
           {error && <p role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
           {mode === "recovery" ? <button type="button" onClick={() => { setMode("login"); setNotice(""); setError(""); }} className="mt-5 w-full text-sm text-muted-foreground hover:text-foreground">Voltar para entrar</button> : <button type="button" onClick={() => { setMode(mode === "register" ? "login" : "register"); setNotice(""); setError(""); }} className="mt-5 w-full text-sm text-muted-foreground hover:text-foreground">{mode === "register" ? "Já tem uma conta? Entrar" : "Ainda não tem uma conta? Criar conta"}</button>}
@@ -181,7 +193,9 @@ function AssistantPanel({ speciesName, petName, mood, score, alerts, onClose }: 
 export function Index() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [isGuest, setIsGuest] = useState(false);
   const [userRole, setUserRole] = useState<DemoRole>("tutor");
   const [councilNumber, setCouncilNumber] = useState("");
   const [assistantOpen, setAssistantOpen] = useState(false);
@@ -193,14 +207,14 @@ export function Index() {
   const [mounted, setMounted] = useState(false);
   const [webgl, setWebgl] = useState(true);
   useEffect(() => {
-    void authClient.getSession().then(({ data }) => {
+    void withTimeout(authClient.getSession(), "O serviço de autenticação não respondeu a tempo.").then(({ data }) => {
       if (data?.user) {
         setUserEmail(data.user.email);
         setUserRole(data.user.role === "veterinarian" ? "veterinarian" : "tutor");
         setCouncilNumber(data.user.councilNumber ?? "");
         setLoggedIn(true);
       }
-    }).catch(() => {}).finally(() => setAuthReady(true));
+    }).catch(() => { setAuthNotice("Não foi possível verificar uma sessão existente. Você ainda pode tentar entrar ou criar uma conta."); }).finally(() => setAuthReady(true));
     setMounted(true);
     try { setWebgl(!!document.createElement("canvas").getContext("webgl2")); } catch { setWebgl(false); }
   }, []);
@@ -217,12 +231,13 @@ export function Index() {
   const maxSignals = Math.max(positiveSignals, attentionSignals, 1);
 
   if (!authReady) return <main className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">Carregando acesso…</main>;
-  if (!loggedIn) return <LoginScreen onLogin={async (mode, email, password, details) => {
+  if (!loggedIn) return <LoginScreen initialNotice={authNotice} onContinueAsGuest={() => { setIsGuest(true); setUserEmail("Visitante"); setLoggedIn(true); }} onLogin={async (mode, email, password, details) => {
     const result = mode === "register"
-      ? await authClient.signUp.email({ email, password, name: email.split("@")[0], role: details.role, councilNumber: details.role === "veterinarian" ? details.councilNumber : "" })
-      : await authClient.signIn.email({ email, password });
+      ? await authClient.signUpEmail({ email, password, name: email.split("@")[0], role: details.role, councilNumber: details.role === "veterinarian" ? details.councilNumber : "" })
+      : await authClient.signInEmail({ email, password });
     if (result.error) return result.error.message ?? "Não foi possível validar o acesso.";
     const signedInUser = result.data?.user;
+    setIsGuest(false);
     setUserEmail(signedInUser?.email ?? email);
     setUserRole(signedInUser?.role === "veterinarian" ? "veterinarian" : "tutor");
     setCouncilNumber(signedInUser?.councilNumber ?? ""); setLoggedIn(true);
@@ -347,13 +362,13 @@ export function Index() {
           <p className="mt-3 rounded-xl border border-border bg-card p-4 text-sm"><span className="block text-xs text-muted-foreground">Tipo de conta</span><span className="mt-1 block font-medium">{userRole === "veterinarian" ? "Veterinário" : "Tutor"}</span>{userRole === "veterinarian" && <><span className="mt-3 block text-xs text-muted-foreground">Conselho profissional</span><span className="mt-1 block font-medium">{councilNumber}</span></>}</p>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Seus dados ficam associados à sua conta.</p>
           <div className="mt-6 flex flex-wrap justify-end gap-2"><button type="button" onClick={async () => {
-            if (!window.confirm("Excluir permanentemente sua conta e os dados associados?")) return;
+            if (isGuest || !window.confirm("Excluir permanentemente sua conta e os dados associados?")) return;
             const password = window.prompt("Confirme sua senha para excluir a conta:");
             if (!password) return;
             const result = await authClient.deleteUser({ password });
             if (result.error) { window.alert(result.error.message ?? "Não foi possível excluir a conta."); return; }
             setSettingsOpen(false); setLoggedIn(false);
-          }} className="rounded-xl border border-destructive/40 px-4 py-2 text-sm text-destructive hover:bg-destructive/10">Excluir conta</button><button type="button" onClick={() => setSettingsOpen(false)} className="rounded-xl border border-border px-4 py-2 text-sm hover:bg-secondary">Fechar</button><button type="button" onClick={() => { setSettingsOpen(false); void authClient.signOut().finally(() => setLoggedIn(false)); }} className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-background"><LogOut className="h-4 w-4" />Sair</button></div>
+          }} disabled={isGuest} className="rounded-xl border border-destructive/40 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50">Excluir conta</button><button type="button" onClick={() => setSettingsOpen(false)} className="rounded-xl border border-border px-4 py-2 text-sm hover:bg-secondary">Fechar</button><button type="button" onClick={() => { setSettingsOpen(false); if (isGuest) { setLoggedIn(false); setIsGuest(false); setUserEmail(""); } else { void authClient.signOut().finally(() => setLoggedIn(false)); } }} className="flex items-center gap-2 rounded-xl bg-destructive px-4 py-2 text-sm font-semibold text-background"><LogOut className="h-4 w-4" />Sair</button></div>
         </section>
       </div>}
       {assistantOpen && <AssistantPanel speciesName={speciesInfo.name} petName={petName.trim()} mood={m.label} score={score} alerts={alerts} onClose={() => setAssistantOpen(false)} />}

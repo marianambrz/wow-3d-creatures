@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "packageManager": "npm@11.17.0",
   "engines": {
-    "node": "24.x"
+    "node": ">=22.13"
   },
   "scripts": {
     "start": "node server.js",
@@ -102,5 +103,10 @@
   },
   "overrides": {
     "rolldown": "1.2.1"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }

@@ -15,7 +15,7 @@ const SECRET = process.env.JWT_SECRET || (() => {   // gera e guarda um segredo 
 // ---------- Banco ----------
 const db = new DatabaseSync(DB_FILE);
 db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
-CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, hash TEXT NOT NULL, created INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, hash TEXT NOT NULL, created INTEGER NOT NULL, name TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'tutor', council_number TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS animals(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   species TEXT NOT NULL, name TEXT NOT NULL, tutor_name TEXT, breed TEXT, birth_date TEXT, notes TEXT, created INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS observations(id INTEGER PRIMARY KEY, animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
@@ -25,9 +25,13 @@ CREATE TABLE IF NOT EXISTS vaccines(id INTEGER PRIMARY KEY, animal_id INTEGER NO
   name TEXT NOT NULL, applied_on TEXT NOT NULL, next_dose TEXT);
 CREATE TABLE IF NOT EXISTS diary(id INTEGER PRIMARY KEY, animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE CASCADE,
   ts INTEGER NOT NULL, text TEXT NOT NULL);`);
+const userColumns = new Set(db.prepare('PRAGMA table_info(users)').all().map(column => column.name));
+if (!userColumns.has('name')) db.exec("ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''");
+if (!userColumns.has('role')) db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'tutor'");
+if (!userColumns.has('council_number')) db.exec("ALTER TABLE users ADD COLUMN council_number TEXT NOT NULL DEFAULT ''");
 const P = s => db.prepare(s);
 const q = {
-  userByEmail: P('SELECT * FROM users WHERE email=?'), addUser: P('INSERT INTO users(email,hash,created) VALUES(?,?,?)'),
+  userByEmail: P('SELECT * FROM users WHERE email=?'), addUser: P('INSERT INTO users(email,hash,created,name,role,council_number) VALUES(?,?,?,?,?,?)'),
   animals: P('SELECT * FROM animals WHERE user_id=? ORDER BY id'), animal: P('SELECT * FROM animals WHERE id=? AND user_id=?'),
   addAnimal: P('INSERT INTO animals(user_id,species,name,tutor_name,breed,birth_date,notes,created) VALUES(?,?,?,?,?,?,?,?)'),
   updAnimal: P('UPDATE animals SET species=?,name=?,tutor_name=?,breed=?,birth_date=?,notes=? WHERE id=?'),
@@ -54,7 +58,7 @@ function verify(t) {
 }
 const hashPw = pw => { const s = crypto.randomBytes(16); return s.toString('hex') + ':' + crypto.scryptSync(pw, s, 64).toString('hex'); };
 const checkPw = (pw, st) => { const [s, h] = st.split(':'); return crypto.timingSafeEqual(crypto.scryptSync(pw, Buffer.from(s, 'hex'), 64), Buffer.from(h, 'hex')); };
-const session = u => ({ token: sign({ sub: u.id, exp: Math.floor(Date.now() / 1000) + 7 * 86400 }), user: { id: u.id, email: u.email } });
+const session = u => ({ token: sign({ sub: u.id, exp: Math.floor(Date.now() / 1000) + 7 * 86400 }), user: { id: u.id, email: u.email, name: u.name || u.email.split('@')[0], role: u.role || 'tutor', councilNumber: u.council_number || '' } });
 const tries = new Map(); // limitador simples de login: 10 tentativas / 15 min por e-mail
 function throttled(k) { const n = Date.now(), a = (tries.get(k) || []).filter(t => n - t < 9e5); a.push(n); tries.set(k, a); return a.length > 10; }
 
@@ -95,8 +99,12 @@ route('POST', '/api/auth/register', 0, ({ body }) => {
   need(email && /^\S+@\S+\.\S+$/.test(email), 'e-mail inválido');
   need(typeof body.password === 'string' && body.password.length >= 8, 'senha deve ter ao menos 8 caracteres');
   if (q.userByEmail.get(email)) throw new Err(409, 'e-mail já cadastrado');
-  const r = q.addUser.run(email, hashPw(body.password), Date.now());
-  return [201, session({ id: Number(r.lastInsertRowid), email })];
+  const role = body.role === 'veterinarian' ? 'veterinarian' : 'tutor';
+  const name = str(body.name, 120) || email.split('@')[0];
+  const councilNumber = role === 'veterinarian' ? str(body.councilNumber, 40) : '';
+  need(role !== 'veterinarian' || councilNumber, 'informe o conselho profissional');
+  const r = q.addUser.run(email, hashPw(body.password), Date.now(), name, role, councilNumber);
+  return [201, session({ id: Number(r.lastInsertRowid), email, name, role, council_number: councilNumber })];
 });
 route('POST', '/api/auth/login', 0, ({ body }) => {
   const email = str(body.email, 120)?.toLowerCase() || '';
@@ -105,7 +113,13 @@ route('POST', '/api/auth/login', 0, ({ body }) => {
   if (!u || typeof body.password !== 'string' || !checkPw(body.password, u.hash)) throw new Err(401, 'e-mail ou senha incorretos');
   return [200, session(u)];
 });
-route('GET', '/api/me', 1, ({ user }) => [200, { id: user.id, email: user.email }]);
+route('GET', '/api/me', 1, ({ user }) => [200, { id: user.id, email: user.email, name: user.name, role: user.role, councilNumber: user.council_number }]);
+route('DELETE', '/api/me', 1, ({ user, body }) => {
+  const account = q.userByEmail.get(user.email);
+  need(typeof body.password === 'string' && checkPw(body.password, account.hash), 'senha incorreta');
+  db.prepare('DELETE FROM users WHERE id=?').run(user.id);
+  return [204, null];
+});
 
 route('GET', '/api/species', 0, () => [200, Object.entries(SPECIES).map(([key, label]) => ({ key, label }))]);
 route('GET', '/api/catalog', 0, ({ url }) => {
@@ -177,10 +191,10 @@ http.createServer(async (req, res) => {
       let user = null;
       if (r.auth) {
         const p = verify((req.headers.authorization || '').replace(/^Bearer /, ''));
-        user = p && db.prepare('SELECT id,email FROM users WHERE id=?').get(p.sub);
+        user = p && db.prepare('SELECT id,email,name,role,council_number FROM users WHERE id=?').get(p.sub);
         if (!user) throw new Err(401, 'não autenticado');
       }
-      const [code, data] = r.fn({ m, url, user, body: ['POST', 'PATCH'].includes(req.method) ? await readBody(req) : {} });
+      const [code, data] = r.fn({ m, url, user, body: ['POST', 'PATCH', 'DELETE'].includes(req.method) ? await readBody(req) : {} });
       return send(code, data);
     }
     send(404, { error: 'rota não encontrada' });

@@ -5,12 +5,19 @@ import { z } from "zod";
 import { db } from "./db";
 import * as schema from "./db/schema";
 
-const appOrigin = process.env.APP_ORIGIN;
+const configuredOrigin = process.env.APP_ORIGIN;
+const vercelDeploymentOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
+const appOrigin = process.env.VERCEL_ENV === "preview"
+  ? vercelDeploymentOrigin ?? configuredOrigin
+  : configuredOrigin;
 if (!appOrigin) throw new Error("APP_ORIGIN is required to configure authentication.");
 const authSecret = process.env.BETTER_AUTH_SECRET;
 if (!authSecret) throw new Error("BETTER_AUTH_SECRET is required to configure authentication.");
 
 const trustedOrigins = new Set([appOrigin]);
+if (process.env.VERCEL_ENV !== "preview" && vercelDeploymentOrigin) {
+  trustedOrigins.add(vercelDeploymentOrigin);
+}
 if (process.env.NODE_ENV !== "production") {
   trustedOrigins.add("http://localhost:*");
   trustedOrigins.add("http://127.0.0.1:*");
