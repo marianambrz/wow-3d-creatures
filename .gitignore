@@ -39,3 +39,4 @@ animal.db-wal
 *.njsproj
 *.sln
 *.sw?
+.env*
