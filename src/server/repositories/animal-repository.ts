@@ -1,4 +1,4 @@
-﻿import type { AnimalProfile } from "../domain/animal";
+import type { AnimalProfile } from "../domain/animal";
 
 /** Persistence boundary; adapters can target a database without changing API handlers. */
 export interface AnimalRepository {

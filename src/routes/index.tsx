@@ -150,7 +150,7 @@ function AssistantPanel({ speciesName, petName, mood, score, alerts, onClose }: 
 }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", text: `Ol\u00e1! Posso ajudar a interpretar o resultado e os sinais observados. O que voc\u00ea gostaria de saber?` },
+    { role: "assistant", text: `Olá! Posso ajudar a interpretar o resultado e os sinais observados. O que você gostaria de saber?` },
   ]);
   const replyTo = (question: string) => {
     const text = normalizeAssistantText(question);
@@ -165,9 +165,9 @@ function AssistantPanel({ speciesName, petName, mood, score, alerts, onClose }: 
       return `A leitura demonstrativa de ${subject} está como “${mood}”, com pontuação ${score > 0 ? `+${score}` : score}.${context} Isso organiza os sinais selecionados, mas não identifica uma causa nem substitui avaliação veterinária. O que mudou na rotina ou quando você percebeu esse comportamento?`;
     }
     if (/ajud|fazer|cuid|observar|agora|comec/.test(text)) {
-      return `Para ajudar ${subject}, observe o que aconteceu antes, quanto tempo o sinal dura e se ele se repete. Mantenha a rotina tranquila e procure orienta\u00e7\u00e3o veterin\u00e1ria se houver piora ou um sinal intenso.`;
+      return `Para ajudar ${subject}, observe o que aconteceu antes, quanto tempo o sinal dura e se ele se repete. Mantenha a rotina tranquila e procure orientação veterinária se houver piora ou um sinal intenso.`;
     }
-    return `Posso ajudar a interpretar os sinais selecionados e a organizar observa\u00e7\u00f5es de comportamento. Conte o que mudou, quando come\u00e7ou e se voltou a acontecer.`;
+    return `Posso ajudar a interpretar os sinais selecionados e a organizar observações de comportamento. Conte o que mudou, quando começou e se voltou a acontecer.`;
   };
   const sendQuestion = (value: string) => {
     const question = value.trim();
@@ -332,16 +332,16 @@ export function Index() {
 
           <section className="order-3 flex flex-col gap-5">
             <div className="glass rounded-2xl p-5">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">{`Gr\u00e1fico e leitura demonstrativa do comportamento de ${displayedPetName}`}</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">{`Gráfico e leitura demonstrativa do comportamento de ${displayedPetName}`}</p>
               <Gauge score={score} mood={mood} />
               <div className="mt-1 space-y-2" role="img" aria-label={`Gráfico demonstrativo: ${positiveSignals} sinais positivos e ${attentionSignals} sinais que merecem atenção`}>
                 <div className="flex items-center gap-2 text-[11px]"><span className="w-28 shrink-0 text-muted-foreground">Sinais positivos</span><span className="h-2 flex-1 overflow-hidden rounded-full bg-secondary"><span className="block h-full rounded-full bg-mood-happy" style={{ width: `${(positiveSignals / maxSignals) * 100}%` }} /></span><span className="w-4 text-right font-medium">{positiveSignals}</span></div>
                 <div className="flex items-center gap-2 text-[11px]"><span className="w-28 shrink-0 text-muted-foreground">Atenção</span><span className="h-2 flex-1 overflow-hidden rounded-full bg-secondary"><span className="block h-full rounded-full bg-mood-alert" style={{ width: `${(attentionSignals / maxSignals) * 100}%` }} /></span><span className="w-4 text-right font-medium">{attentionSignals}</span></div>
               </div>
-              {hasUnappliedChanges && <p role="status" className="-mt-2 mb-2 text-center text-xs font-medium text-primary">{"Atualize o resultado para aplicar as altera\u00e7\u00f5es."}</p>}
+              {hasUnappliedChanges && <p role="status" className="-mt-2 mb-2 text-center text-xs font-medium text-primary">{"Atualize o resultado para aplicar as alterações."}</p>}
               <p className="font-display -mt-2 text-center text-2xl font-semibold" style={{ color: `var(--${m.token})` }}>{m.label}</p>
-              <p className="text-center text-xs text-muted-foreground">{"Pontua\u00e7\u00e3o"} {score > 0 ? `+${score}` : score}</p>
-              <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">{"Esta estimativa simplificada n\u00e3o substitui uma avalia\u00e7\u00e3o veterin\u00e1ria."}</p>
+              <p className="text-center text-xs text-muted-foreground">{"Pontuação"} {score > 0 ? `+${score}` : score}</p>
+              <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">{"Esta estimativa simplificada não substitui uma avaliação veterinária."}</p>
               {alerts.length > 0 && (
                 <div className="mt-4 space-y-2">
                   {alerts.map((a) => (
